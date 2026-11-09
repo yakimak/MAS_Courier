@@ -95,5 +95,6 @@ lang: ru
 через CLI и веб-интерфейс.
 
 Исходный код, результаты и веб-демонстрация:
-<https://github.com/yakimak/MAS_Courier>.
+<https://github.com/yakimak/MAS_Courier>.  
+Онлайн-демо: <https://yakimak.github.io/MAS_Courier/>.
 
