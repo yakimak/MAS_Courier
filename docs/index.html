@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAS-Courier · интерактивная демонстрация</title>
+<style>
+  :root {
+    --bg:#eef2f7; --card:#ffffff; --ink:#12263a; --muted:#5d6d7e;
+    --accent:#2f5d8a; --accent2:#27ae60; --danger:#c0392b; --warn:#e67e22;
+    --line:#d9e2ec;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { background:linear-gradient(135deg,#0f1b2a 0%,#244a70 55%,#2f5d8a 100%);
+           color:#fff; padding:26px 30px 22px; }
+  header h1 { margin:0 0 4px; font-size:26px; letter-spacing:.2px; }
+  header p { margin:0; opacity:.85; font-size:14px; }
+  header .links { margin-top:10px; display:flex; gap:14px; flex-wrap:wrap; }
+  header a { color:#cfe3f7; font-size:13px; text-decoration:none; border-bottom:1px dashed #7fa8cc; }
+  main { max-width:1280px; margin:22px auto 40px; padding:0 18px; display:grid; gap:18px; }
+  .card { background:var(--card); border-radius:16px; padding:18px 20px;
+          box-shadow:0 6px 24px rgba(18,38,58,.08); }
+  h2 { margin:0 0 12px; font-size:15px; text-transform:uppercase;
+       letter-spacing:.07em; color:var(--muted); }
+  .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+              gap:12px; align-items:end; }
+  label { display:flex; flex-direction:column; gap:5px; font-size:11px;
+          font-weight:700; color:var(--muted); text-transform:uppercase;
+          letter-spacing:.05em; }
+  select, input { padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+                  font-size:14px; background:#fff; color:var(--ink); }
+  button { grid-column:1/-1; padding:12px 16px; border:0; border-radius:10px;
+           background:linear-gradient(135deg,#2f5d8a,#244a70); color:#fff;
+           font-size:15px; font-weight:800; cursor:pointer; letter-spacing:.02em; }
+  button:hover { filter:brightness(1.08); }
+  .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+  .metric { background:#f4f8fc; border:1px solid #e3edf6; border-radius:12px; padding:12px 14px; }
+  .metric .v { font-size:22px; font-weight:900; color:var(--accent); line-height:1.15; }
+  .metric .k { font-size:10px; color:var(--muted); text-transform:uppercase;
+               letter-spacing:.06em; margin-top:3px; }
+  .row { display:grid; grid-template-columns:1.25fr .95fr; gap:18px; }
+  .row3 { display:grid; grid-template-columns:1.1fr 1fr; gap:18px; }
+  canvas { width:100%; height:360px; display:block; border-radius:12px; background:#fbfdff; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:8px 9px; border-bottom:1px solid #e8eef5; text-align:left; vertical-align:top; }
+  th { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .pill { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px;
+          font-weight:700; background:#eaf2fb; color:var(--accent); }
+  .pill.ok { background:#e8f8ef; color:var(--accent2); }
+  .pill.bad { background:#fdecea; color:var(--danger); }
+  .log { font-family:Consolas,ui-monospace,monospace; font-size:12px; line-height:1.55;
+         max-height:300px; overflow:auto; background:#0f1b2a; color:#d6e4f0;
+         border-radius:12px; padding:14px; white-space:pre-wrap; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:11px; color:var(--muted); }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.45; }
+  @media (max-width:950px){ .row,.row3{grid-template-columns:1fr;} canvas{height:300px;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>MAS-Courier</h1>
+  <p>Многоагентная система курьерской доставки · интерактивная демонстрация в браузере</p>
+  <div class="links">
+    <a href="https://github.com/yakimak/MAS_Courier" target="_blank" rel="noopener">Репозиторий</a>
+    <a href="https://github.com/yakimak/MAS_Courier/tree/main/reports" target="_blank" rel="noopener">Отчёты ЛР №1–№4</a>
+    <a href="https://github.com/yakimak/MAS_Courier/blob/main/README.md" target="_blank" rel="noopener">README</a>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Параметры запуска</h2>
+    <div class="controls">
+      <label>Механизм
+        <select id="mechanism">
+          <option value="contract_net">Контрактная сеть</option>
+          <option value="centralized">Централизованный</option>
+          <option value="auction">Аукцион</option>
+          <option value="fcfs">FCFS (до переговоров)</option>
+          <option value="negotiation">Переговоры</option>
+        </select>
+      </label>
+      <label>Seed <input id="seed" type="number" value="42" min="0" max="999999"></label>
+      <label>Заказов <input id="orders" type="number" value="15" min="3" max="30"></label>
+      <label>Курьеров <input id="couriers" type="number" value="5" min="2" max="10"></label>
+      <label>Fault-режим
+        <select id="faults">
+          <option value="none">без fault'ов</option>
+          <option value="baseline">fault'ы без защиты</option>
+          <option value="defended">fault'ы с защитой</option>
+        </select>
+      </label>
+      <button id="runBtn">Запустить симуляцию</button>
+    </div>
+    <div class="hint">Сценарий детерминирован по seed. Все расчёты выполняются локально в браузере.</div>
+  </section>
+
+  <section class="card">
+    <h2>Метрики</h2>
+    <div id="metrics" class="metrics"></div>
+  </section>
+
+  <div class="row">
+    <section class="card">
+      <h2>Карта и маршруты</h2>
+      <canvas id="map" width="800" height="360"></canvas>
+      <div id="legend" class="legend"></div>
+    </section>
+    <section class="card">
+      <h2>План и события</h2>
+      <table id="plan"><thead><tr><th>Курьер</th><th>Заказы</th></tr></thead><tbody></tbody></table>
+      <div class="hint" id="summary"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Журнал выполнения</h2>
+    <div id="log" class="log">Нажмите «Запустить симуляцию».</div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const MSG_COST = 0.15;
+const SERVICE = 3;
+
+// ---------- PRNG ----------
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function randInt(rng, a, b) { return Math.floor(rng() * (b - a + 1)) + a; }
+function pickK(rng, arr, k) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, k);
+}
+
+// ---------- Среда ----------
+function travel(u, v) {
+  const x1 = u % 4, y1 = Math.floor(u / 4);
+  const x2 = v % 4, y2 = Math.floor(v / 4);
+  return (Math.abs(x1 - x2) + Math.abs(y1 - y2)) * 4;
+}
+
+function generateScenario(seed, nOrders, nCouriers) {
+  const rng = mulberry32(seed >>> 0);
+  const orders = [];
+  for (let i = 0; i < nOrders; i++) {
+    const pickup = randInt(rng, 0, 11);
+    let delivery = randInt(rng, 0, 10);
+    if (delivery >= pickup) delivery += 1;
+    const ready = randInt(rng, 0, 44);
+    const window = randInt(rng, 35, 109);
+    const r = rng();
+    const priority = r < 0.45 ? 1 : (r < 0.80 ? 2 : 3);
+    orders.push({
+      id: i, pickup, delivery, ready, deadline: ready + window,
+      priority, weight: randInt(rng, 1, 5),
+      reward: 80 + 60 * priority + randInt(rng, 0, 59)
+    });
+  }
+  const couriers = [];
+  for (let i = 0; i < nCouriers; i++) {
+    couriers.push({
+      id: i, start: randInt(rng, 0, 11),
+      capacity: randInt(rng, 8, 14),
+      speed: 0.85 + rng() * 0.30,
+      costPerMin: 0.8 + rng() * 0.7,
+      reliability: 0.80 + rng() * 0.19,
+      shiftEnd: randInt(rng, 240, 360),
+      reputation: 0.65 + rng() * 0.30
+    });
+  }
+  return { seed, nOrders, nCouriers, orders, couriers };
+}
+
+// ---------- Маршрут ----------
+function evaluateRoute(route, courier, sc, timeScale) {
+  timeScale = timeScale || 1;
+  let t = 0, loc = courier.start, load = 0, maxLoad = 0;
+  let reward = 0, late = 0, feasible = true, reason = "";
+  const delivered = [], onTime = [], schedule = [];
+  for (const oid of route) {
+    const o = sc.orders[oid];
+    t += travel(loc, o.pickup) / courier.speed * timeScale;
+    if (t < o.ready) t = o.ready;
+    t += SERVICE;
+    load += o.weight;
+    maxLoad = Math.max(maxLoad, load);
+    if (load > courier.capacity + 1e-9) { feasible = false; reason = "capacity"; break; }
+    t += travel(o.pickup, o.delivery) / courier.speed * timeScale;
+    t += SERVICE;
+    load -= o.weight;
+    if (t > courier.shiftEnd + 1e-9) { feasible = false; reason = "shift_end"; break; }
+    delivered.push(oid);
+    const ot = t <= o.deadline + 1e-9;
+    onTime.push(ot);
+    late += Math.max(0, t - o.deadline);
+    reward += ot ? o.reward : 0.5 * o.reward;
+    schedule.push({ order: oid, deliveryTime: t, onTime: ot });
+    loc = o.delivery;
+  }
+  return {
+    feasible, reason, completion: t, cost: courier.costPerMin * t,
+    reward, delivered, onTime, late, schedule, maxLoad
+  };
+}
+
+function bestInsertion(courier, route, oid, sc) {
+  let best = null;
+  for (let pos = 0; pos <= route.length; pos++) {
+    const nr = route.slice(0, pos).concat([oid], route.slice(pos));
+    const ev = evaluateRoute(nr, courier, sc);
+    if (!ev.feasible) continue;
+    const score = ev.completion + 0.35 * ev.cost;
+    if (!best || score < best.score) best = { route: nr, score, eval: ev };
+  }
+  return best;
+}
+
+function gini(values) {
+  if (!values.length) return 0;
+  const arr = values.map(v => Math.max(0, v)).sort((a, b) => a - b);
+  const sum = arr.reduce((a, b) => a + b, 0);
+  if (sum <= 1e-12) return 0;
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += (i + 1) * arr[i];
+  return 2 * s / (arr.length * sum) - (arr.length + 1) / arr.length;
+}
+
+function evaluatePlan(plan, sc, messages, delayScale) {
+  delayScale = delayScale || {};
+  let totalReward = 0, totalCost = 0, late = 0;
+  const delivered = new Set(), onTime = [], completions = [], earnings = [], deliveryTimes = [];
+  for (const c of sc.couriers) {
+    const route = plan[c.id] || [];
+    const ev = evaluateRoute(route, c, sc, delayScale[c.id] || 1);
+    totalReward += ev.reward;
+    totalCost += ev.cost;
+    ev.delivered.forEach(oid => delivered.add(oid));
+    ev.onTime.forEach(v => onTime.push(v));
+    late += ev.late;
+    completions.push(route.length ? ev.completion : 0);
+    earnings.push(ev.reward - ev.cost);
+    ev.schedule.forEach(s => deliveryTimes.push(s.deliveryTime));
+  }
+  const coordination = messages * MSG_COST;
+  const n = sc.orders.length;
+  const onTimeCount = onTime.filter(Boolean).length;
+  return {
+    delivered: delivered.size,
+    failed: n - delivered.size,
+    onTime: onTimeCount,
+    onTimeRate: n ? onTimeCount / n : 0,
+    sla: n ? onTimeCount / n : 0,
+    reward: totalReward,
+    transportCost: totalCost,
+    coordinationCost: coordination,
+    profit: totalReward - totalCost - coordination,
+    makespan: completions.length ? Math.max(...completions) : 0,
+    lateMinutes: late,
+    messages,
+    gini: gini(earnings),
+    utilization: completions.length
+      ? completions.reduce((a, v, i) => a + Math.min(1, v / sc.couriers[i].shiftEnd), 0) / completions.length
+      : 0,
+    avgDeliveryTime: deliveryTimes.length
+      ? deliveryTimes.reduce((a, b) => a + b, 0) / deliveryTimes.length : 0
+  };
+}
+
+function sortOrders(sc) {
+  return sc.orders.slice().sort((a, b) =>
+    (b.priority - a.priority) || (a.deadline - b.deadline) ||
+    (b.reward - a.reward) || (a.id - b.id));
+}
+
+function clonePlan(plan) { return plan.map(r => r.slice()); }
+
+// ---------- Протоколы ----------
+function centralizedDispatch(sc) {
+  const plan = sc.couriers.map(() => []);
+  const events = [];
+  let messages = 0;
+  for (const o of sortOrders(sc)) {
+    let best = null;
+    for (const c of sc.couriers) {
+      const ins = bestInsertion(c, plan[c.id], o.id, sc);
+      if (ins && (!best || ins.score < best.score)) best = { cid: c.id, route: ins.route, score: ins.score };
+    }
+    messages++;
+    if (best) {
+      plan[best.cid] = best.route;
+      messages++;
+      events.push({ order: o.id, courier: best.cid, action: "ASSIGN", protocol: "centralized" });
+    } else {
+      events.push({ order: o.id, courier: null, action: "UNASSIGNED", protocol: "centralized" });
+    }
+  }
+  return { plan, events, messages, protocol: "centralized", metrics: evaluatePlan(plan, sc, messages) };
+}
+
+function contractNet(sc) {
+  const plan = sc.couriers.map(() => []);
+  const events = [];
+  let messages = 0;
+  for (const o of sortOrders(sc)) {
+    messages++;
+    const proposals = [];
+    for (const c of sc.couriers) {
+      const ins = bestInsertion(c, plan[c.id], o.id, sc);
+      if (!ins) continue;
+      messages++;
+      const score = ins.score + 3 * plan[c.id].length - 12 * c.reliability - 6 * o.priority;
+      proposals.push({ cid: c.id, route: ins.route, score });
+    }
+    if (proposals.length) {
+      proposals.sort((a, b) => a.score - b.score);
+      const w = proposals[0];
+      plan[w.cid] = w.route;
+      messages++;
+      events.push({ order: o.id, courier: w.cid, action: "AWARD", bids: proposals.length, protocol: "contract_net" });
+    } else {
+      messages++;
+      events.push({ order: o.id, courier: null, action: "NO_BIDS", protocol: "contract_net" });
+    }
+  }
+  return { plan, events, messages, protocol: "contract_net", metrics: evaluatePlan(plan, sc, messages) };
+}
+
+function auction(sc) {
+  const plan = sc.couriers.map(() => []);
+  const events = [];
+  let messages = 0;
+  for (const o of sortOrders(sc)) {
+    messages++;
+    const rng = mulberry32((sc.seed * 1000 + o.id) >>> 0);
+    const bids = [];
+    for (const c of sc.couriers) {
+      const ins = bestInsertion(c, plan[c.id], o.id, sc);
+      if (!ins) continue;
+      messages++;
+      let bid = (ins.eval.cost + 0.10 * ins.eval.completion) * (1 + 0.08 * plan[c.id].length);
+      bid += rng() * 8;
+      bids.push({ cid: c.id, route: ins.route, bid });
+    }
+    if (bids.length) {
+      bids.sort((a, b) => a.bid - b.bid);
+      const w = bids[0];
+      plan[w.cid] = w.route;
+      messages++;
+      events.push({ order: o.id, courier: w.cid, action: "WIN", bids: bids.length, protocol: "auction" });
+    } else {
+      messages++;
+      events.push({ order: o.id, courier: null, action: "NO_BIDS", protocol: "auction" });
+    }
+  }
+  return { plan, events, messages, protocol: "auction", metrics: evaluatePlan(plan, sc, messages) };
+}
+
+function fcfsDispatch(sc) {
+  const plan = sc.couriers.map(() => []);
+  const events = [];
+  let messages = 0;
+  for (const o of sc.orders.slice().sort((a, b) => a.id - b.id)) {
+    messages++;
+    let assigned = false;
+    for (const c of sc.couriers) {
+      const ins = bestInsertion(c, plan[c.id], o.id, sc);
+      if (!ins) continue;
+      plan[c.id] = ins.route;
+      messages++;
+      events.push({ order: o.id, courier: c.id, action: "ASSIGN_FCFS", protocol: "fcfs" });
+      assigned = true;
+      break;
+    }
+    if (!assigned) events.push({ order: o.id, courier: null, action: "UNASSIGNED", protocol: "fcfs" });
+  }
+  return { plan, events, messages, protocol: "fcfs", metrics: evaluatePlan(plan, sc, messages) };
+}
+
+function negotiatedDispatch(sc) {
+  const plan = sc.couriers.map(() => []);
+  const events = [];
+  let messages = 0, roundsTotal = 0;
+
+  for (const o of sortOrders(sc)) {
+    const candidates = [];
+    for (const c of sc.couriers) {
+      if (plan[c.id].length >= 4) continue;
+      const ins = bestInsertion(c, plan[c.id], o.id, sc);
+      if (ins) candidates.push({ c, ins });
+    }
+    if (!candidates.length) {
+      messages++;
+      events.push({ order: o.id, courier: null, action: "NO_CANDIDATES", protocol: "negotiation" });
+      continue;
+    }
+    let compensation = 0.5 * o.reward;
+    let accepted = [], rounds = 0;
+    for (let r = 0; r < 3; r++) {
+      rounds++;
+      messages++;
+      accepted = [];
+      for (const cand of candidates) {
+        const ev = cand.ins.eval;
+        const lateRisk = Math.max(0, ev.completion - o.deadline) * 2;
+        const utility = compensation - 0.55 * ev.cost - lateRisk;
+        const reservation = 8 + 2 * plan[cand.c.id].length;
+        messages++;
+        if (utility >= reservation) accepted.push({ ...cand, utility });
+      }
+      if (accepted.length) break;
+      compensation = Math.min(o.reward, compensation * 1.35 + 5);
+    }
+    roundsTotal += rounds;
+    if (accepted.length) {
+      let winner = accepted[0];
+      let bestScore = -Infinity;
+      for (const a of accepted) {
+        const s = 12 * a.c.reliability - 3 * plan[a.c.id].length + 0.01 * a.utility;
+        if (s > bestScore) { bestScore = s; winner = a; }
+      }
+      plan[winner.c.id] = winner.ins.route;
+      messages++;
+      events.push({ order: o.id, courier: winner.c.id, action: "AGREEMENT",
+                    rounds, protocol: "negotiation" });
+    } else {
+      let winner = candidates[0];
+      let bestScore = Infinity;
+      for (const a of candidates) {
+        const s = a.ins.score - 15 * a.c.reliability + 4 * plan[a.c.id].length;
+        if (s < bestScore) { bestScore = s; winner = a; }
+      }
+      plan[winner.c.id] = winner.ins.route;
+      messages += 2;
+      events.push({ order: o.id, courier: winner.c.id, action: "ARBITRATION",
+                    rounds, protocol: "negotiation" });
+    }
+  }
+  return { plan, events, messages, protocol: "negotiation",
+           negotiationRounds: roundsTotal,
+           metrics: evaluatePlan(plan, sc, messages) };
+}
+
+function runMechanism(name, sc) {
+  if (name === "centralized") return centralizedDispatch(sc);
+  if (name === "contract_net") return contractNet(sc);
+  if (name === "auction") return auction(sc);
+  if (name === "fcfs") return fcfsDispatch(sc);
+  if (name === "negotiation") return negotiatedDispatch(sc);
+  throw new Error("Unknown mechanism: " + name);
+}
+
+// ---------- Faults и защита ----------
+const FAULT_NAMES = {
+  fake_location: "Недостоверная геолокация",
+  goal_substitution: "Подмена цели агента",
+  map_outage: "Недоступность картографического сервиса",
+  wrong_delegation: "Некорректная передача полномочий",
+  circular_transfer: "Циклическая передача задачи",
+  contradictory: "Противоречивые указания"
+};
+
+function chooseFaults(seed) {
+  const rng = mulberry32((seed * 7919 + 13) >>> 0);
+  const faults = [];
+  if (rng() < 0.55) faults.push("fake_location");
+  if (rng() < 0.45) faults.push("goal_substitution");
+  if (rng() < 0.40) faults.push("map_outage");
+  if (rng() < 0.35) faults.push("wrong_delegation");
+  if (rng() < 0.25) faults.push("circular_transfer");
+  if (rng() < 0.25) faults.push("contradictory");
+  if (!faults.length) faults.push("fake_location");
+  return faults;
+}
+
+function reinsertOrder(sc, plan, oid, exclude) {
+  let best = null;
+  for (const c of sc.couriers) {
+    if (exclude !== null && c.id === exclude) continue;
+    const ins = bestInsertion(c, plan[c.id], oid, sc);
+    if (!ins) continue;
+    const score = ins.score + 3 * plan[c.id].length;
+    if (!best || score < best.score) best = { cid: c.id, route: ins.route, score };
+  }
+  if (best) { plan[best.cid] = best.route; return best.cid; }
+  return null;
+}
+
+function injectFaults(sc, base, defense) {
+  const plan = clonePlan(base.plan);
+  let messages = base.messages;
+  const baseMessages = messages;
+  const delayScale = {};
+  const removed = new Set();
+  const events = [], detectionTimes = [];
+  const faults = chooseFaults(sc.seed);
+  const rng = mulberry32((sc.seed * 104729 + (defense ? 1 : 0)) >>> 0);
+
+  for (const fault of faults) {
+    const ev = { fault, name: FAULT_NAMES[fault], defense,
+                 detected: false, detectionTime: null, action: "" };
+    if (fault === "fake_location") {
+      const affected = pickK(rng, sc.couriers.map(c => c.id), Math.min(2, sc.couriers.length));
+      if (defense) {
+        affected.forEach(cid => delayScale[cid] = Math.max(delayScale[cid] || 1, 1.03));
+        messages += 2 * affected.length;
+        detectionTimes.push(4);
+        ev.detected = true; ev.detectionTime = 4;
+        ev.action = "сверка геолокации и ETA, корректировка";
+      } else {
+        affected.forEach(cid => delayScale[cid] = Math.max(delayScale[cid] || 1, 1.18));
+        ev.action = "неверный ETA, опоздания";
+      }
+    } else if (fault === "goal_substitution") {
+      const candidates = plan.map((r, cid) => r.length ? cid : -1).filter(cid => cid >= 0);
+      if (candidates.length) {
+        const cid = candidates[Math.floor(rng() * candidates.length)];
+        const oid = plan[cid].shift();
+        if (defense) {
+          const newCid = reinsertOrder(sc, plan, oid, cid);
+          messages += 4; detectionTimes.push(8);
+          ev.detected = true; ev.detectionTime = 8;
+          if (newCid !== null) ev.action = "обнаружено, заказ передан курьеру " + newCid;
+          else { removed.add(oid); ev.action = "обнаружено, переназначить не удалось"; }
+        } else {
+          removed.add(oid); ev.action = "заказ потерян";
+        }
+      }
+    } else if (fault === "map_outage") {
+      if (defense) {
+        sc.couriers.forEach(c => delayScale[c.id] = Math.max(delayScale[c.id] || 1, 1.05));
+        messages += sc.couriers.length; detectionTimes.push(1);
+        ev.detected = true; ev.detectionTime = 1;
+        ev.action = "fallback на кэшированный граф";
+      } else {
+        sc.couriers.forEach(c => delayScale[c.id] = Math.max(delayScale[c.id] || 1, 1.22));
+        ev.action = "маршруты по устаревшему графу";
+      }
+    } else if (fault === "wrong_delegation") {
+      const candidates = plan.map((r, cid) => r.length ? cid : -1).filter(cid => cid >= 0);
+      if (candidates.length) {
+        const cid = candidates[Math.floor(rng() * candidates.length)];
+        const oid = plan[cid][0];
+        if (defense) {
+          messages += 2; detectionTimes.push(1);
+          ev.detected = true; ev.detectionTime = 1;
+          ev.action = "валидация состояния курьера, назначение отклонено";
+        } else {
+          plan[cid] = plan[cid].filter(x => x !== oid);
+          removed.add(oid); ev.action = "назначение не выполнено";
+        }
+      }
+    } else if (fault === "circular_transfer" || fault === "contradictory") {
+      const all = [];
+      plan.forEach((r, cid) => r.forEach(oid => all.push([cid, oid])));
+      if (all.length) {
+        const [cid, oid] = all[Math.floor(rng() * all.length)];
+        if (defense) {
+          messages += fault === "circular_transfer" ? 1 : 2;
+          detectionTimes.push(1);
+          ev.detected = true; ev.detectionTime = 1;
+          ev.action = fault === "circular_transfer"
+            ? "токен владения с TTL предотвратил цикл"
+            : "версионирование и блокировка владельца";
+        } else {
+          plan[cid] = plan[cid].filter(x => x !== oid);
+          removed.add(oid);
+          ev.action = fault === "circular_transfer"
+            ? "цикл A→B→A, заказ потерян" : "дублирующее указание, заказ потерян";
+        }
+      }
+    }
+    events.push(ev);
+  }
+
+  const metrics = evaluatePlan(plan, sc, messages, delayScale);
+  metrics.faults = faults.slice();
+  metrics.detected = events.filter(e => e.detected).length;
+  metrics.detectionTime = detectionTimes.length
+    ? detectionTimes.reduce((a, b) => a + b, 0) / detectionTimes.length : 0;
+  metrics.overheadMessages = messages - baseMessages;
+  metrics.falsePositiveRate = defense ? 0.01 : 0;
+  metrics.messages = messages;
+  return { plan, metrics, events, faults, removed: Array.from(removed) };
+}
+
+// ---------- Отрисовка ----------
+const COLORS = ["#2f5d8a", "#27ae60", "#c0392b", "#8e44ad", "#e67e22", "#16a085", "#2980b9", "#d35400"];
+
+function drawMap(sc, plan) {
+  const canvas = document.getElementById("map");
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(300, rect.width) * dpr;
+  canvas.height = Math.max(220, rect.height) * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.width / dpr, H = canvas.height / dpr;
+  const padX = 46, padY = 38;
+  const pos = i => ({
+    x: padX + (i % 4) * (W - 2 * padX) / 3,
+    y: padY + Math.floor(i / 4) * (H - 2 * padY) / 2
+  });
+
+  // городские рёбра
+  ctx.strokeStyle = "#d9e2ec";
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 12; i++) {
+    const x = i % 4, y = Math.floor(i / 4);
+    const p = pos(i);
+    if (x < 3) { const q = pos(i + 1); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+    if (y < 2) { const q = pos(i + 4); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+  }
+
+  // маршруты
+  sc.couriers.forEach((c, k) => {
+    const route = plan[c.id] || [];
+    if (!route.length) return;
+    const pts = [pos(c.start)];
+    for (const oid of route) {
+      const o = sc.orders[oid];
+      pts.push(pos(o.pickup)); pts.push(pos(o.delivery));
+    }
+    ctx.strokeStyle = COLORS[k % COLORS.length];
+    ctx.lineWidth = 2.4;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // старт
+    ctx.fillStyle = COLORS[k % COLORS.length];
+    ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 4, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // узлы
+  for (let i = 0; i < 12; i++) {
+    const p = pos(i);
+    ctx.fillStyle = "#f9e79f";
+    ctx.strokeStyle = "#2c3e50";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#12263a";
+    ctx.font = "bold 11px Segoe UI";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(i), p.x, p.y);
+  }
+}
+
+function renderLegend(sc) {
+  const el = document.getElementById("legend");
+  el.innerHTML = sc.couriers.map((c, k) =>
+    `<span><i class="dot" style="background:${COLORS[k % COLORS.length]}"></i>Курьер ${c.id}</span>`
+  ).join("");
+}
+
+function renderMetrics(m, faultMode) {
+  const items = [
+    ["Прибыль", m.profit.toFixed(1)],
+    ["SLA", m.sla.toFixed(3)],
+    ["Доставлено", `${m.delivered} / ${m.delivered + m.failed}`],
+    ["Сообщений", m.messages],
+    ["Gini", m.gini.toFixed(3)],
+    ["Makespan", m.makespan.toFixed(1)],
+    ["Утилизация", (m.utilization * 100).toFixed(0) + "%"],
+    ["Ср. доставка", m.avgDeliveryTime.toFixed(1) + " мин"]
+  ];
+  if (faultMode !== "none") {
+    items.push(["Fault'ов", (m.faults || []).length]);
+    items.push(["Обнаружено", m.detected ?? "—"]);
+    items.push(["Накладные", m.overheadMessages ?? 0]);
+    items.push(["Обнаружение", (m.detectionTime || 0).toFixed(1) + " мин"]);
+  }
+  document.getElementById("metrics").innerHTML = items.map(([k, v]) =>
+    `<div class="metric"><div class="v">${v}</div><div class="k">${k}</div></div>`
+  ).join("");
+}
+
+function renderPlan(sc, plan) {
+  const tbody = document.querySelector("#plan tbody");
+  tbody.innerHTML = "";
+  for (const c of sc.couriers) {
+    const tr = document.createElement("tr");
+    const orders = (plan[c.id] || []);
+    tr.innerHTML = `<td><b>Курьер ${c.id}</b><br><span class="hint">cap=${c.capacity}, shift=${c.shiftEnd}</span></td>
+                    <td>${orders.length ? orders.join(", ") : "—"}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderLog(events, result) {
+  const lines = [];
+  for (const e of events.slice(0, 50)) {
+    if (e.fault) {
+      lines.push(`[fault] ${e.name}: ${e.action}${e.detectionTime ? " · обнаружено за " + e.detectionTime + " мин" : ""}`);
+    } else {
+      lines.push(`[${e.protocol || ""}] order=${e.order} courier=${e.courier ?? "—"} action=${e.action}` +
+                 (e.bids ? ` bids=${e.bids}` : "") + (e.rounds ? ` rounds=${e.rounds}` : ""));
+    }
+  }
+  if (result && result.negotiationRounds !== undefined) {
+    lines.push(`[negotiation] всего раундов: ${result.negotiationRounds}`);
+  }
+  document.getElementById("log").textContent = lines.join("\n") || "Событий нет.";
+}
+
+// ---------- UI ----------
+function runDemo() {
+  const mechanism = document.getElementById("mechanism").value;
+  const seed = Number(document.getElementById("seed").value);
+  const nOrders = Number(document.getElementById("orders").value);
+  const nCouriers = Number(document.getElementById("couriers").value);
+  const faultMode = document.getElementById("faults").value;
+
+  const sc = generateScenario(seed, nOrders, nCouriers);
+  let result = runMechanism(mechanism, sc);
+  let events = result.events || [];
+  let plan = result.plan;
+
+  if (faultMode !== "none") {
+    const base = runMechanism("contract_net", sc);
+    const fr = injectFaults(sc, base, faultMode === "defended");
+    result = { ...result, metrics: fr.metrics, plan: fr.plan };
+    events = fr.events;
+    plan = fr.plan;
+  }
+
+  renderMetrics(result.metrics, faultMode);
+  renderPlan(sc, plan);
+  renderLog(events, result);
+  drawMap(sc, plan);
+  renderLegend(sc);
+  document.getElementById("summary").innerHTML =
+    `Механизм: <span class="pill">${mechanism}</span> · seed ${seed} · ` +
+    `${nOrders} заказов · ${nCouriers} курьеров · ` +
+    `<span class="pill ${faultMode === "none" ? "ok" : "bad"}">${faultMode === "none" ? "без faults" : faultMode}</span>`;
+}
+
+document.getElementById("runBtn").addEventListener("click", runDemo);
+window.addEventListener("resize", () => {
+  const sc = generateScenario(
+    Number(document.getElementById("seed").value),
+    Number(document.getElementById("orders").value),
+    Number(document.getElementById("couriers").value)
+  );
+  // перерисовываем текущий план из последнего запуска нельзя без сохранения;
+  // просто перезапускаем демонстрацию при изменении размера окна
+  runDemo();
+});
+runDemo();
+</script>
+</body>
+</html>
