@@ -1,0 +1,49 @@
+{
+  "faults": [
+    "wrong_delegation",
+    "circular_transfer"
+  ],
+  "events": [
+    {
+      "fault": "wrong_delegation",
+      "name": "Некорректная передача полномочий",
+      "defense": true,
+      "detected": true,
+      "detection_time": 1.0,
+      "action": "валидация состояния курьера, назначение отклонено"
+    },
+    {
+      "fault": "circular_transfer",
+      "name": "Циклическая передача задачи",
+      "defense": true,
+      "detected": true,
+      "detection_time": 1.0,
+      "action": "токен владения с TTL предотвратил цикл"
+    }
+  ],
+  "metrics": {
+    "delivered": 16,
+    "failed": 0,
+    "on_time": 16,
+    "on_time_rate": 1.0,
+    "sla": 1.0,
+    "reward": 3373.0,
+    "transport_cost": 385.417212427519,
+    "coordination_cost": 19.65,
+    "profit": 2967.9327875724807,
+    "makespan": 60.85242993264649,
+    "late_minutes": 0.0,
+    "messages": 131,
+    "gini": 0.09931031560143722,
+    "utilization": 0.1915788084511908,
+    "avg_delivery_time": 38.13446400271669,
+    "faults": [
+      "wrong_delegation",
+      "circular_transfer"
+    ],
+    "detected": 2,
+    "detection_time": 1.0,
+    "overhead_messages": 3,
+    "false_positive_rate": 0.01
+  }
+}

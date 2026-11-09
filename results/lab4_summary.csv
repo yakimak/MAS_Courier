@@ -1,0 +1,3 @@
+mode,n,delivered_mean,delivered_std,on_time_rate_mean,on_time_rate_std,profit_mean,profit_std,messages_mean,messages_std,overhead_messages_mean,overhead_messages_std,detection_time_mean,detection_time_std,detected_faults_mean,detected_faults_std
+baseline,100,14.59,0.9807650075323854,0.885625,0.07606278245633667,2659.4859742732992,288.6917641810149,128.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+defended,100,16.0,0.0,0.97625,0.04218634257671551,2966.3156739808687,214.0150540561865,136.11,3.8128598190859306,8.11,3.8128598190859315,3.1025,1.8705634549217756,2.4,1.104536101718726

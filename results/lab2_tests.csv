@@ -1,0 +1,13 @@
+mechanism_a,mechanism_b,metric,p_value
+centralized,contract_net,profit,0.7442787787026959
+centralized,contract_net,on_time_rate,0.7130698367104591
+centralized,contract_net,gini,0.10289522307573544
+centralized,contract_net,messages,3.5216158823946e-45
+centralized,auction,profit,0.5260420469900255
+centralized,auction,on_time_rate,0.28499127471919883
+centralized,auction,gini,0.00014789099031521405
+centralized,auction,messages,3.5216158823946e-45
+contract_net,auction,profit,0.643348458724508
+contract_net,auction,on_time_rate,0.14244523205752527
+contract_net,auction,gini,2.899038876536004e-07
+contract_net,auction,messages,nan
